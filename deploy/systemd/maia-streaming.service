@@ -1,0 +1,21 @@
+[Unit]
+Description=Maia Streaming Media Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=maia-streaming
+Group=maia-streaming
+ExecStart=/usr/local/bin/maia-streaming --config /etc/maia-streaming/config.toml
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/maia/media
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
