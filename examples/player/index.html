@@ -1,9 +1,525 @@
 <!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maia Streaming Player</title></head>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maia Streaming • Servidor e Player de Mídia</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-border: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 1rem;
+    }
+    .logo-area { display: flex; align-items: center; gap: 0.75rem; }
+    .logo-badge {
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      color: white;
+      font-weight: 700;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 1.1rem;
+    }
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.9rem;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--success);
+      display: inline-block;
+      box-shadow: 0 0 8px var(--success);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 1024px) {
+      .grid { grid-template-columns: 2fr 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    video, audio {
+      width: 100%;
+      border-radius: 6px;
+      background: #000;
+      outline: none;
+    }
+    .buffer-monitor {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .buffer-bar {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 0.35rem;
+      position: relative;
+    }
+    .buffer-fill {
+      position: absolute;
+      height: 100%;
+      background: var(--primary);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #334155; color: var(--text); }
+    .btn-secondary:hover { background: #475569; }
+    .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+    .btn-danger { background: var(--danger); }
+    .asset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .asset-item {
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .asset-info { display: flex; flex-direction: column; gap: 0.2rem; }
+    .asset-title { font-weight: 600; font-size: 0.95rem; }
+    .asset-meta { font-size: 0.8rem; color: var(--text-muted); }
+    .asset-actions { display: flex; gap: 0.4rem; }
+    .upload-zone {
+      border: 2px dashed var(--panel-border);
+      padding: 1.5rem;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+    .upload-zone:hover { border-color: var(--primary); }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .metric-box {
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      padding: 0.75rem;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .metric-value { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+    .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+    .token-box {
+      background: #0f172a;
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      word-break: break-all;
+      margin-top: 0.5rem;
+      border: 1px solid var(--panel-border);
+    }
+  </style>
+</head>
 <body>
-  <h1>Maia Streaming Player</h1>
-  <video controls preload="metadata" width="960" src="/v1/media/ASSET_ID/content"></video>
-  <audio controls preload="metadata" src="/v1/media/AUDIO_ASSET_ID/content"></audio>
+  <header>
+    <div class="logo-area">
+      <div class="logo-badge">MAIA</div>
+      <div>
+        <h1 style="font-size: 1.25rem;">Maia Streaming</h1>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Servidor de Mídia Nativo C++20 • VOD, HLS, Range & WebRTC</p>
+      </div>
+    </div>
+    <div class="server-status">
+      <div><span class="status-dot" id="statusDot"></span> <span id="statusText">Conectando...</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="loadStatus()">Atualizar</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Main Content: Media Player & Asset Streamer -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span>Reprodutor de Vídeo HTML5 (HTTP 206 Range)</span>
+          <span id="playingAssetTitle" style="font-size: 0.85rem; color: var(--primary);">Nenhum ativo selecionado</span>
+        </div>
+        <video id="videoPlayer" controls preload="metadata"></video>
+        <div class="buffer-monitor">
+          <div style="display:flex; justify-content:space-between;">
+            <span>Buffers recebidos via Range Requests:</span>
+            <span id="bufferStats">0s / 0s (0%)</span>
+          </div>
+          <div class="buffer-bar" id="bufferBar"></div>
+        </div>
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="seekRelative(-5)">⏪ -5s</button>
+          <button class="btn btn-secondary btn-sm" onclick="seekRelative(5)">+5s ⏩</button>
+          <button class="btn btn-secondary btn-sm" onclick="switchPlaybackMode('vod')">Modo VOD (Range)</button>
+          <button class="btn btn-secondary btn-sm" onclick="switchPlaybackMode('hls')">Modo HLS (.m3u8)</button>
+          <button class="btn btn-secondary btn-sm" onclick="generateTokenForCurrent()">Gerar Playback Token</button>
+        </div>
+        <div id="tokenDisplay" style="display:none;" class="token-box"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Reprodutor de Áudio Nativo</span>
+        </div>
+        <audio id="audioPlayer" controls preload="metadata"></audio>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>WebRTC & SFU Control</span>
+        </div>
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <input type="text" id="roomIdInput" placeholder="Nome da Sala (ex: sala-reuniao-1)" style="flex:1; padding:0.4rem 0.6rem; border-radius:4px; background:#0f172a; border:1px solid var(--panel-border); color:white;">
+          <button class="btn btn-sm" onclick="createWebRtcRoom()">Criar Sala</button>
+          <button class="btn btn-secondary btn-sm" onclick="startRecording()">Iniciar Gravação</button>
+          <button class="btn btn-danger btn-sm" onclick="stopRecording()">Parar Gravação</button>
+        </div>
+        <div id="webrtcLogs" style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted); background: #0f172a; padding: 0.5rem; border-radius: 4px; max-height: 120px; overflow-y: auto;">Pronto para conexões SFU.</div>
+      </div>
+    </div>
+
+    <!-- Sidebar: Asset Library & Server Metrics -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span>Biblioteca de Mídias</span>
+          <button class="btn btn-secondary btn-sm" onclick="loadAssets()">↻</button>
+        </div>
+
+        <div class="upload-zone" onclick="document.getElementById('fileUploadInput').click()">
+          <p>📁 Clique ou arraste arquivo de mídia aqui</p>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Suporta MP4, WebM, WAV, MP3, OGG, PNG, JPG</span>
+          <input type="file" id="fileUploadInput" style="display:none" onchange="uploadSelectedFile(event)">
+        </div>
+
+        <div class="asset-list" id="assetList">
+          <p style="color: var(--text-muted); text-align: center; padding: 1rem;">Nenhum ativo carregado.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Métricas Operacionais</span>
+          <a href="/metrics" target="_blank" class="btn btn-secondary btn-sm">Prometheus</a>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div class="metric-value" id="metricUptime">0s</div>
+            <div class="metric-label">Uptime</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value" id="metricConns">0</div>
+            <div class="metric-label">Conexões Ativas</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value" id="metricRanges">0</div>
+            <div class="metric-label">206 Range Reqs</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value" id="metricBytes">0 MB</div>
+            <div class="metric-label">Bytes Enviados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentAssetId = null;
+    let currentAsset = null;
+    let activeRecordingId = null;
+    const video = document.getElementById('videoPlayer');
+    const audio = document.getElementById('audioPlayer');
+
+    async function loadStatus() {
+      try {
+        const res = await fetch('/readyz');
+        const data = await res.json();
+        if (data.status === 'ready') {
+          document.getElementById('statusDot').style.backgroundColor = '#10b981';
+          document.getElementById('statusDot').style.boxShadow = '0 0 8px #10b981';
+          document.getElementById('statusText').innerText = `Online (${data.uptime_seconds}s)`;
+        } else {
+          document.getElementById('statusDot').style.backgroundColor = '#f59e0b';
+          document.getElementById('statusText').innerText = 'Inicializando...';
+        }
+
+        const metricsRes = await fetch('/metrics');
+        const metricsText = await metricsRes.text();
+        parseMetrics(metricsText);
+      } catch (e) {
+        document.getElementById('statusDot').style.backgroundColor = '#ef4444';
+        document.getElementById('statusText').innerText = 'Offline';
+      }
+    }
+
+    function parseMetrics(txt) {
+      const getVal = (name) => {
+        const m = txt.match(new RegExp(`^${name}\\s+(\\d+)`, 'm'));
+        return m ? parseInt(m[1], 10) : 0;
+      };
+      const uptime = getVal('maia_streaming_uptime_seconds');
+      const conns = getVal('maia_streaming_active_connections');
+      const ranges = getVal('maia_streaming_vod_range_requests_total');
+      const bytes = getVal('maia_streaming_http_bytes_sent_total');
+
+      document.getElementById('metricUptime').innerText = `${uptime}s`;
+      document.getElementById('metricConns').innerText = conns;
+      document.getElementById('metricRanges').innerText = ranges;
+      document.getElementById('metricBytes').innerText = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    async function loadAssets() {
+      try {
+        const res = await fetch('/v1/assets');
+        const assets = await res.json();
+        const list = document.getElementById('assetList');
+        if (!assets || assets.length === 0) {
+          list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">Nenhum ativo registrado.</p>';
+          return;
+        }
+
+        list.innerHTML = '';
+        assets.forEach(a => {
+          const item = document.createElement('div');
+          item.className = 'asset-item';
+          const sizeMb = (a.size_bytes / (1024 * 1024)).toFixed(2);
+          item.innerHTML = `
+            <div class="asset-info">
+              <span class="asset-title">${a.title || a.id}</span>
+              <span class="asset-meta">${a.media_type} • ${a.container} • ${sizeMb} MB • ID: ${a.id}</span>
+            </div>
+            <div class="asset-actions">
+              <button class="btn btn-sm" onclick='selectAsset(${JSON.stringify(a).replace(/'/g, "&#39;")})'>Tocar</button>
+              <button class="btn btn-secondary btn-sm" onclick="triggerJob('${a.id}', 'thumbnail')">🖼</button>
+              <button class="btn btn-secondary btn-sm" onclick="triggerJob('${a.id}', 'hls-package')">HLS</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteAsset('${a.id}')">✕</button>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      } catch (e) {
+        console.error('Failed to load assets', e);
+      }
+    }
+
+    function selectAsset(asset) {
+      currentAsset = asset;
+      currentAssetId = asset.id;
+      document.getElementById('playingAssetTitle').innerText = `${asset.title || asset.id} (${asset.media_type})`;
+
+      if (asset.media_type === 'audio') {
+        audio.src = `/v1/media/${asset.id}/content`;
+        audio.play().catch(()=>{});
+      } else {
+        video.src = `/v1/media/${asset.id}/content`;
+        video.play().catch(()=>{});
+      }
+    }
+
+    function switchPlaybackMode(mode) {
+      if (!currentAssetId) return;
+      if (mode === 'vod') {
+        video.src = `/v1/media/${currentAssetId}/content`;
+      } else if (mode === 'hls') {
+        video.src = `/v1/hls/${currentAssetId}/master.m3u8`;
+      }
+      video.play().catch(()=>{});
+    }
+
+    async function generateTokenForCurrent() {
+      if (!currentAssetId) return;
+      const res = await fetch(`/v1/assets/${currentAssetId}/playback-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ttl_seconds: 7200, op: 'play' })
+      });
+      const data = await res.json();
+      const box = document.getElementById('tokenDisplay');
+      box.style.display = 'block';
+      box.innerText = `Token Playback: ${data.token}`;
+    }
+
+    async function triggerJob(assetId, type) {
+      const res = await fetch(`/v1/assets/${assetId}/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: type })
+      });
+      const data = await res.json();
+      alert(`Job ${type} iniciado! ID: ${data.id}`);
+      loadAssets();
+    }
+
+    async function deleteAsset(assetId) {
+      if (!confirm('Deseja realmente excluir este ativo?')) return;
+      await fetch(`/v1/assets/${assetId}`, { method: 'DELETE' });
+      loadAssets();
+    }
+
+    async function uploadSelectedFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const buffer = await file.arrayBuffer();
+      const res = await fetch(`/v1/assets?filename=${encodeURIComponent(file.name)}&title=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Filename': file.name
+        },
+        body: buffer
+      });
+
+      if (res.ok) {
+        const asset = await res.json();
+        loadAssets();
+        selectAsset(asset);
+      } else {
+        alert('Falha no upload do arquivo.');
+      }
+    }
+
+    function seekRelative(sec) {
+      if (video) video.currentTime = Math.max(0, video.currentTime + sec);
+    }
+
+    // Monitor buffer bar
+    video.addEventListener('progress', updateBuffer);
+    video.addEventListener('timeupdate', updateBuffer);
+
+    function updateBuffer() {
+      const bar = document.getElementById('bufferBar');
+      bar.innerHTML = '';
+      if (!video.duration || video.duration === Infinity) return;
+
+      for (let i = 0; i < video.buffered.length; i++) {
+        const start = video.buffered.start(i);
+        const end = video.buffered.end(i);
+        const fill = document.createElement('div');
+        fill.className = 'buffer-fill';
+        fill.style.left = `${(start / video.duration) * 100}%`;
+        fill.style.width = `${((end - start) / video.duration) * 100}%`;
+        bar.appendChild(fill);
+      }
+
+      const cur = video.currentTime.toFixed(1);
+      const dur = video.duration.toFixed(1);
+      const pct = ((video.currentTime / video.duration) * 100).toFixed(0);
+      document.getElementById('bufferStats').innerText = `${cur}s / ${dur}s (${pct}%)`;
+    }
+
+    // WebRTC / SFU Controls
+    async function createWebRtcRoom() {
+      const name = document.getElementById('roomIdInput').value || 'sala-demo';
+      const res = await fetch('/v1/webrtc/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_id: name, name: name })
+      });
+      const data = await res.json();
+      logWebRtc(`Sala criada: ${data.id} (${data.name})`);
+    }
+
+    async function startRecording() {
+      const name = document.getElementById('roomIdInput').value || 'sala-demo';
+      const res = await fetch('/v1/recordings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_id: name, title: 'Gravação ' + name })
+      });
+      const data = await res.json();
+      activeRecordingId = data.id;
+      logWebRtc(`Gravação iniciada: ${data.id}`);
+    }
+
+    async function stopRecording() {
+      if (!activeRecordingId) {
+        logWebRtc('Nenhuma gravação ativa.');
+        return;
+      }
+      const res = await fetch(`/v1/recordings/${activeRecordingId}/stop`, { method: 'POST' });
+      const data = await res.json();
+      logWebRtc(`Gravação finalizada! Ativo gerado: ${data.asset_id}`);
+      activeRecordingId = null;
+      loadAssets();
+    }
+
+    function logWebRtc(msg) {
+      const el = document.getElementById('webrtcLogs');
+      const time = new Date().toLocaleTimeString();
+      el.innerHTML = `[${time}] ${msg}<br>` + el.innerHTML;
+    }
+
+    // Init
+    loadStatus();
+    loadAssets();
+    setInterval(loadStatus, 3000);
+  </script>
 </body>
 </html>

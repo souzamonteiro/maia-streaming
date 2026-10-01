@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace maia::vod {
@@ -15,4 +16,8 @@ struct ByteRange {
 [[nodiscard]] std::optional<ByteRange> parseByteRange(
     std::string_view header,
     std::uint64_t objectSize) noexcept;
-}
+
+[[nodiscard]] std::string formatContentRange(const ByteRange& range, std::uint64_t total_size);
+[[nodiscard]] std::string formatContentRangeUnsatisfiable(std::uint64_t total_size);
+
+} // namespace maia::vod
