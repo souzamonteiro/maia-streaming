@@ -39,4 +39,13 @@ std::optional<ByteRange> parseByteRange(std::string_view header, std::uint64_t s
     if (*last >= size) *last = size - 1;
     return ByteRange{*first, *last};
 }
+
+std::string formatContentRange(const ByteRange& range, std::uint64_t total_size) {
+    return "bytes " + std::to_string(range.first) + "-" + std::to_string(range.last) + "/" + std::to_string(total_size);
 }
+
+std::string formatContentRangeUnsatisfiable(std::uint64_t total_size) {
+    return "bytes */" + std::to_string(total_size);
+}
+
+} // namespace maia::vod

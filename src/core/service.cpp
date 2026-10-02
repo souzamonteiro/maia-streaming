@@ -371,12 +371,31 @@ void Service::setup_routes() {
 
     http_server_->post("/v1/assets", [this](const http::HttpRequest& req) {
         std::string filename = req.get_header("X-Filename", req.get_param("filename", "upload.mp4"));
+        std::string binary_data = req.body;
+        std::string title_override;
+        std::string owner_override;
+
+        if (req.get_header("Content-Type").find("json") != std::string::npos && !req.body.empty()) {
+            auto j = core::Json::parse(req.body);
+            if (j && j->is_object()) {
+                if (j->contains("name")) filename = j->get("name").as_string();
+                if (j->contains("filename")) filename = j->get("filename").as_string();
+                if (j->contains("title")) title_override = j->get("title").as_string();
+                if (j->contains("owner")) owner_override = j->get("owner").as_string();
+                if (j->contains("data_base64")) {
+                    auto decoded = core::base64_decode(j->get("data_base64").as_string());
+                    if (decoded) {
+                        binary_data.assign(reinterpret_cast<const char*>(decoded->data()), decoded->size());
+                    }
+                }
+            }
+        }
         filename = core::sanitize_filename(filename);
 
         media::Asset asset;
         asset.id = core::generate_id("01J");
-        asset.title = req.get_param("title", filename);
-        asset.owner = req.get_param("owner", "default");
+        asset.title = !title_override.empty() ? title_override : req.get_param("title", filename);
+        asset.owner = !owner_override.empty() ? owner_override : req.get_param("owner", "default");
         asset.created_at = core::iso8601_now();
 
         std::string dot_ext;
@@ -388,16 +407,16 @@ void Service::setup_routes() {
         }
         asset.storage_key = asset.id + dot_ext;
 
-        if (!req.body.empty()) {
+        if (!binary_data.empty()) {
             // Write binary payload to storage
             storage_->write_file(storage::Category::Assets, asset.storage_key,
-                                 reinterpret_cast<const uint8_t*>(req.body.data()), req.body.size());
-            asset.size_bytes = req.body.size();
+                                 reinterpret_cast<const uint8_t*>(binary_data.data()), binary_data.size());
+            asset.size_bytes = binary_data.size();
 
             // Probe media
             auto probed = media::probe_media(
-                reinterpret_cast<const uint8_t*>(req.body.data()),
-                std::min<std::size_t>(req.body.size(), 64), filename);
+                reinterpret_cast<const uint8_t*>(binary_data.data()),
+                std::min<std::size_t>(binary_data.size(), 64), filename);
 
             asset.media_type = probed.media_type;
             asset.container = probed.container;
